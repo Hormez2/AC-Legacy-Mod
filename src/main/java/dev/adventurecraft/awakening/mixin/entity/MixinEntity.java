@@ -2,6 +2,7 @@ package dev.adventurecraft.awakening.mixin.entity;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import dev.adventurecraft.awakening.extension.nbt.ExListTag;
+import dev.adventurecraft.awakening.extension.util.io.ExCompoundTag;
 import dev.adventurecraft.awakening.util.HashCode;
 import dev.adventurecraft.awakening.tile.AC_Blocks;
 import dev.adventurecraft.awakening.extension.entity.ExEntity;
@@ -9,7 +10,9 @@ import dev.adventurecraft.awakening.util.RandomUtil;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 import net.minecraft.world.entity.Entity;
@@ -165,6 +169,9 @@ public abstract class MixinEntity implements ExEntity {
 
     @Shadow
     public abstract float distanceTo(Entity arg);
+
+    @Shadow
+    public abstract void baseTick();
 
     @Inject(method = "move", at = @At(
         value = "FIELD",
@@ -406,17 +413,17 @@ public abstract class MixinEntity implements ExEntity {
     }
 
     @Override
-    public void setCustomTagString(String key, String value) {
+    public void setTagString(String key, String value) {
         this.customData.put(key, value);
     }
 
     @Override
-    public boolean hasCustomTagString(String key) {
+    public boolean hasTagString(String key) {
         return this.customData.containsKey(key);
     }
 
     @Override
-    public String getOrCreateCustomTagString(String key, String defaultValue) {
+    public String getOrCreateTagString(String key, String defaultValue) {
         if (this.customData.containsKey(key)) {
             return this.customData.get(key);
         }
@@ -425,7 +432,27 @@ public abstract class MixinEntity implements ExEntity {
     }
 
     @Override
-    public String getCustomTagString(String key) {
+    public String getTagString(String key) {
         return customData.get(key);
+    }
+
+    @Inject(method = "saveWithoutId",at =@At("TAIL"))
+    private void afterSaveWithoutId(CompoundTag nbt, CallbackInfo ci){
+        var compoundTag = new CompoundTag();
+        for(String key : this.customData.keySet()){
+            String data = this.customData.get(key);
+            if(data != null){
+                compoundTag.putTag(key,new StringTag(data));
+            }
+        }
+        nbt.putTag("custom",compoundTag);
+    }
+    @Inject(method = "load",at =@At("TAIL"))
+    private void afterload(CompoundTag nbt, CallbackInfo ci){
+        var exTag = (ExCompoundTag) nbt.getCompoundTag("custom");
+        for(String key : exTag.getKeys()){
+            Optional<String> value = exTag.findString(key);
+            value.ifPresent(string -> this.customData.put(key, string));
+        }
     }
 }

@@ -334,21 +334,21 @@ public class ScriptEntity {
     }
 
 
-    public void setCustomTagString(String key, String value) {
-        ((ExEntity) this.entity).setCustomTagString(key, value);
+    public void setTagString(String key, String value) {
+        ((ExEntity) this.entity).setTagString(key, value);
     }
 
-    public boolean hasCustomTagString(String key) {
-        return ((ExEntity) this.entity).hasCustomTagString(key);
+    public boolean hasTagString(String key) {
+        return ((ExEntity) this.entity).hasTagString(key);
 
     }
 
-    public String getOrCreateCustomTagString(String key, String defaultValue) {
-        return ((ExEntity) this.entity).getOrCreateCustomTagString(key, defaultValue);
+    public String getOrCreateTagString(String key, String defaultValue) {
+        return ((ExEntity) this.entity).getOrCreateTagString(key, defaultValue);
     }
 
-    public String getCustomTagString(String key) {
-        return ((ExEntity) this.entity).getCustomTagString(key);
+    public String getTagString(String key) {
+        return ((ExEntity) this.entity).getTagString(key);
     }
 
 }
