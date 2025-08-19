@@ -11,7 +11,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
-public class TextRendererState implements TextMeasurer {
+import java.util.Objects;
+
+public final class TextRendererState implements TextMeasurer {
 
     private final Font font;
     private @Nullable Tesselator tesselator;
@@ -35,7 +37,18 @@ public class TextRendererState implements TextMeasurer {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, this.font.fontTexture);
     }
 
+    private @NotNull Tesselator assertBegun() {
+        if (this.tesselator == null) {
+            throw new AssertionError("not started");
+        }
+        return this.tesselator;
+    }
+
     public void begin(Tesselator tesselator) {
+        Objects.requireNonNull(tesselator);
+        if (this.tesselator != null) {
+            throw new AssertionError("already started");
+        }
         this.bindTexture();
 
         this.tesselator = tesselator;
@@ -45,9 +58,8 @@ public class TextRendererState implements TextMeasurer {
     }
 
     public void end() {
-        assert this.tesselator != null;
-
-        this.tesselator.end();
+        Tesselator ts = this.assertBegun();
+        ts.end();
         this.tesselator = null;
     }
 
@@ -73,11 +85,8 @@ public class TextRendererState implements TextMeasurer {
 
         formatOnly = formatOnly || (Rgba.getAlpha(this.activeColor) == 0);
 
-        var ts = this.tesselator;
-        assert ts != null;
-
-        var exTs = (ExTesselator) ts;
-        exTs.ac$color(this.activeColor);
+        var exTs = (ExTesselator) assertBegun();
+        exTs.ac$color8(this.activeColor);
 
         var font = (ExTextRenderer) this.font;
         int[] colorPalette = font.getColorPalette();
@@ -103,7 +112,7 @@ public class TextRendererState implements TextMeasurer {
                         this.activeShadow = Rgba.withRgb(this.activeShadow, colorPalette[colorIndex + 16]);
                     }
                     else {
-                        exTs.ac$color(this.activeColor);
+                        exTs.ac$color8(this.activeColor);
                     }
                 }
                 i++; // skip the format code digit
@@ -122,11 +131,11 @@ public class TextRendererState implements TextMeasurer {
             int column = ch % 16 * 8;
             int row = ch / 16 * 8;
             if (this.hasShadow()) {
-                exTs.ac$color(this.activeShadow);
-                drawChar(ts, column, row, xOff + x + this.shadowOffsetX, y + this.shadowOffsetY);
-                exTs.ac$color(this.activeColor);
+                exTs.ac$color8(this.activeShadow);
+                drawChar(exTs, column, row, xOff + x + this.shadowOffsetX, y + this.shadowOffsetY);
+                exTs.ac$color8(this.activeColor);
             }
-            drawChar(ts, column, row, xOff + x, y);
+            drawChar(exTs, column, row, xOff + x, y);
             xOff += widthLookup[ch];
         }
         return new TextRect(end - start, xOff);
@@ -170,15 +179,15 @@ public class TextRendererState implements TextMeasurer {
         this.setShadowOffsetY(offsetY);
     }
 
-    private static void drawChar(Tesselator ts, int column, int row, float x, float y) {
+    private static void drawChar(ExTesselator ts, int column, int row, float x, float y) {
         float u = column / 128f;
         float v = row / 128f;
         float f = 7.99f;
         float t = f / 128f;
-        ts.vertexUV(x, y + f, 0.0, u, v + t);
-        ts.vertexUV(x + f, y + f, 0.0, u + t, v + t);
-        ts.vertexUV(x + f, y, 0.0, u + t, v);
-        ts.vertexUV(x, y, 0.0, u, v);
+        ts.ac$vertexUV(x, y + f, 0, u, v + t);
+        ts.ac$vertexUV(x + f, y + f, 0, u + t, v + t);
+        ts.ac$vertexUV(x + f, y, 0, u + t, v);
+        ts.ac$vertexUV(x, y, 0, u, v);
     }
 
     public static void validateCharSequence(CharSequence text, int start, int end) {
