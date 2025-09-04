@@ -5,12 +5,12 @@ import com.llamalad7.mixinextras.sugar.Local;
 import dev.adventurecraft.awakening.ACMainThread;
 import dev.adventurecraft.awakening.ACMod;
 import dev.adventurecraft.awakening.client.gl.GLDevice;
+import dev.adventurecraft.awakening.client.gui.AC_ChatScreen;
+import dev.adventurecraft.awakening.client.gui.AC_InBedChatScreen;
 import dev.adventurecraft.awakening.client.options.Config;
 import dev.adventurecraft.awakening.common.*;
-import dev.adventurecraft.awakening.client.gui.AC_ChatScreen;
 import dev.adventurecraft.awakening.common.gui.AC_GuiMapSelect;
 import dev.adventurecraft.awakening.common.gui.AC_GuiStore;
-import dev.adventurecraft.awakening.client.gui.AC_InBedChatScreen;
 import dev.adventurecraft.awakening.extension.block.ExBlock;
 import dev.adventurecraft.awakening.extension.client.ExMinecraft;
 import dev.adventurecraft.awakening.extension.client.entity.player.ExAbstractClientPlayerEntity;
@@ -29,16 +29,11 @@ import dev.adventurecraft.awakening.item.AC_IUseDelayItem;
 import dev.adventurecraft.awakening.script.ScriptEntity;
 import dev.adventurecraft.awakening.script.ScriptItem;
 import dev.adventurecraft.awakening.script.ScriptModel;
-import dev.adventurecraft.awakening.script.ScriptVec3;
+import dev.adventurecraft.awakening.script.ScriptVec3Block;
 import dev.adventurecraft.awakening.tile.AC_Blocks;
 import dev.adventurecraft.awakening.util.MathF;
 import net.fabricmc.loader.impl.util.Arguments;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.Option;
-import net.minecraft.client.Options;
-import net.minecraft.client.ProgressRenderer;
-import net.minecraft.client.ScreenSizeCalculator;
-import net.minecraft.client.User;
+import net.minecraft.client.*;
 import net.minecraft.client.gamemode.CreativeMode;
 import net.minecraft.client.gamemode.GameMode;
 import net.minecraft.client.gui.Gui;
@@ -196,7 +191,7 @@ public abstract class MixinMinecraft implements ExMinecraft {
     @Unique public AC_GuiStore storeGUI = new AC_GuiStore();
     @Unique ItemInstance lastItemUsed;
     @Unique Entity lastEntityHit;
-    @Unique ScriptVec3 lastBlockHit;
+    @Unique ScriptVec3Block lastBlockHit;
     @Unique private GLDevice glDevice;
 
     @Overwrite(remap = false)
@@ -1138,12 +1133,15 @@ public abstract class MixinMinecraft implements ExMinecraft {
         else {
             // Hit a block
             if (this.lastBlockHit == null || this.lastBlockHit.x != (double) this.hitResult.x ||
-                this.lastBlockHit.y != (double) this.hitResult.y || this.lastBlockHit.z != (double) this.hitResult.z) {
+                this.lastBlockHit.y != (double) this.hitResult.y || this.lastBlockHit.z != (double) this.hitResult.z ||
+                this.lastBlockHit.blockFace != this.hitResult.face) {
 
-                this.lastBlockHit = new ScriptVec3(
+                this.lastBlockHit = new ScriptVec3Block(
                     (float) this.hitResult.x,
                     (float) this.hitResult.y,
-                    (float) this.hitResult.z
+                    (float) this.hitResult.z,
+                    this.level.getTile(this.hitResult.x, this.hitResult.y, this.hitResult.z),
+                    this.hitResult.face
                 );
                 var tmp = Context.javaToJS(this.lastBlockHit, globalScope);
                 ScriptableObject.putProperty(globalScope, "hitBlock", tmp);

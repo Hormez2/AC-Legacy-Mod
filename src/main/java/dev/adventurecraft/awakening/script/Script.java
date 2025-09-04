@@ -9,8 +9,11 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.level.Level;
 import org.mozilla.javascript.*;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @SuppressWarnings("unused")
 public class Script {
@@ -123,6 +126,7 @@ public class Script {
         defineClass("Model", ScriptModel.class);
         defineClass("ModelBlockbench", ScriptModelBlockbench.class);
         defineClass("Vec3", ScriptVec3.class);
+        defineClass("Vec3Block", ScriptVec3Block.class);
         defineClass("VecRot", ScriptVecRot.class);
     }
 
