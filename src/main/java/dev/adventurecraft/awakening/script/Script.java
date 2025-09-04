@@ -9,8 +9,11 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.level.Level;
 import org.mozilla.javascript.*;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @SuppressWarnings("unused")
 public class Script {
@@ -48,6 +51,7 @@ public class Script {
     final ScriptUI ui;
     final ScriptRenderer renderer;
     final ScriptScript script;
+    final ScriptCutscene cutscene;
     public final ScriptKeyboard keyboard;
     final List<ContinuationPending> continuations = new ArrayList<>();
     final List<ContinuationPending> newContinuations = new ArrayList<>();
@@ -89,6 +93,7 @@ public class Script {
         this.script = new ScriptScript(level);
         this.keyboard = new ScriptKeyboard(level, Minecraft.instance.options, this.getNewScope());
         this.renderer = new ScriptRenderer(Minecraft.instance.levelRenderer);
+        this.cutscene = new ScriptCutscene(level);
 
         this.addObject("time", this.time);
         this.addObject("world", this.world);
@@ -104,6 +109,7 @@ public class Script {
         this.addObject("hitEntity", null);
         this.addObject("hitBlock", null);
         this.addObject("renderer", this.renderer);
+        this.addObject("cutscene", this.cutscene);
 
         if (gameOptions.getAllowJavaInScript()) {
             // Alias our package as `net.minecraft.script` for back-compat.
