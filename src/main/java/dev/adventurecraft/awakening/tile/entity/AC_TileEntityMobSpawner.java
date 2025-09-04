@@ -1,33 +1,34 @@
 package dev.adventurecraft.awakening.tile.entity;
 
-import java.util.*;
-
 import dev.adventurecraft.awakening.ACMod;
-import dev.adventurecraft.awakening.common.*;
+import dev.adventurecraft.awakening.common.AC_TriggerArea;
+import dev.adventurecraft.awakening.common.Coord;
 import dev.adventurecraft.awakening.entity.AC_EntityLivingScript;
 import dev.adventurecraft.awakening.entity.AC_EntitySkeletonSword;
 import dev.adventurecraft.awakening.extension.entity.ExFallingBlockEntity;
 import dev.adventurecraft.awakening.extension.util.io.ExCompoundTag;
 import dev.adventurecraft.awakening.extension.world.ExWorld;
 import dev.adventurecraft.awakening.item.AC_ItemCursor;
+import dev.adventurecraft.awakening.script.ScopeTag;
+import dev.adventurecraft.awakening.script.ScriptEntity;
 import dev.adventurecraft.awakening.util.Xoshiro128PP;
-import net.minecraft.world.level.tile.Tile;
 import net.minecraft.client.Minecraft;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.ItemInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityIO;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.item.FallingTile;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.Minecart;
-import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.monster.Skeleton;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.ItemInstance;
-import dev.adventurecraft.awakening.script.ScopeTag;
-import dev.adventurecraft.awakening.script.ScriptEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.tile.Tile;
 import org.mozilla.javascript.Scriptable;
+
+import java.util.*;
 
 public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
 
@@ -40,9 +41,13 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
     public int dropItem;
     public boolean hasDroppedItem;
     public boolean spawnOnTrigger;
-    public boolean spawnOnDetrigger;
+    private final List<Integer> missingEntities;
     public final List<Entity> spawnedEntities;
     public final List<Entity> entitiesLeft;
+    public boolean spawnOnDeTrigger;
+    //public int ticksBeforeLoad = 20;
+    //public CompoundTag delayLoadData;
+    public boolean showDebugInfo = true;
     public int spawnID;
     public int spawnMeta;
     private final Xoshiro128PP rand;
@@ -50,9 +55,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
     public final Coord[] maxVec;
     public Coord minSpawnVec;
     public Coord maxSpawnVec;
-    public int ticksBeforeLoad = 20;
-    public CompoundTag delayLoadData;
-    public boolean showDebugInfo = true;
+    private int missingEntityTicks = 0;
     public boolean showParticles = true;
     private boolean ignoreSpawnConditions = false;
 
@@ -68,7 +71,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         this.dropItem = 0;
         this.hasDroppedItem = false;
         this.spawnOnTrigger = true;
-        this.spawnOnDetrigger = false;
+        this.spawnOnDeTrigger = false;
         this.rand = new Xoshiro128PP();
         this.minVec = new Coord[8];
         this.maxVec = new Coord[8];
@@ -78,7 +81,8 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
 
         this.minSpawnVec = Coord.zero;
         this.maxSpawnVec = Coord.zero;
-        this.delayLoadData = null;
+        //this.delayLoadData = null;
+        this.missingEntities = new ArrayList<>();
         this.scope = ((ExWorld) Minecraft.instance.level).getScript().getNewScope();
     }
 
@@ -125,7 +129,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
     }
 
     public void spawnMobs() {
-        if (this.delay > 0 || this.getNumAlive() > 0 || this.delayLoadData != null) {
+        if (this.delay > 0 || this.getNumAlive() > 0 || !this.missingEntities.isEmpty()) {
             return;
         }
 
@@ -286,19 +290,31 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         short entityCount = tag.getShort("numEntities");
         for (int id = 0; id < entityCount; ++id) {
             int entityId = tag.getInt(String.format("entID_%d", id));
+            missingEntities.add(entityId);
+        }
+    }
 
+    private void searchMissingEntities() {
+        List<Integer> removal = new ArrayList<>();
+        for (int entityId : missingEntities) {
             for (Entity entity : (List<Entity>) this.level.entities) {
                 if (entity.id == entityId) {
                     this.spawnedEntities.add(entity);
                     if (entity.isAlive()) {
                         this.entitiesLeft.add(entity);
                     }
+                    removal.add(entityId);
                     break;
                 }
             }
         }
-
-        if (entityCount > 0) {
+        missingEntities.removeAll(removal);
+        if (missingEntityTicks++ >= 20) {
+            missingEntities.clear();
+            ACMod.LOGGER.info("Cleared Spawner info");
+        }
+        if (missingEntities.isEmpty()) {
+            ACMod.LOGGER.info("Found all after {} Ticks", missingEntityTicks);
             this.executeScript(this.onTriggerScriptFile);
         }
     }
@@ -329,7 +345,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         }
     }
 
-    private void detrigger() {
+    private void deTrigger() {
         this.spawnedEntities.clear();
         this.entitiesLeft.clear();
         this.delay = this.respawnDelay;
@@ -351,12 +367,18 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
     }
 
     public void tick() {
-        if (this.delayLoadData != null) {
-            if (this.ticksBeforeLoad == 0) {
-                this.loadFromTag(this.delayLoadData);
-                this.delayLoadData = null;
-            }
-            --this.ticksBeforeLoad;
+        /*ACMod.LOGGER.info(
+            "ME: {}, Delay: {},SE {}, [{},{},{}]",
+            missingEntities.size(),
+            this.delay,
+            this.spawnedEntities.size(),
+            spawnStill,
+            spawnOnTrigger,
+            spawnOnDeTrigger
+        );
+         */
+        if (!this.missingEntities.isEmpty()) {
+            searchMissingEntities();
             return;
         }
         if (this.delay > 0) {
@@ -366,7 +388,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
 
         if (!this.spawnedEntities.isEmpty()) {
             if (this.getNumAlive() == 0) {
-                this.detrigger();
+                this.deTrigger();
             }
             else {
                 this.executeScript(this.onUpdateScriptFile);
@@ -374,10 +396,9 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
             return;
         }
 
-        if (this.spawnStill || !this.spawnOnTrigger && !this.spawnOnDetrigger) {
+        if (this.spawnStill || !this.spawnOnTrigger && !this.spawnOnDeTrigger) {
             this.spawnMobs();
         }
-
         super.tick();
     }
 
@@ -438,7 +459,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         this.respawnDelay = tag.getInt("RespawnDelay");
         this.spawnNumber = tag.getInt("SpawnNumber");
         this.spawnOnTrigger = tag.getBoolean("SpawnOnTrigger");
-        this.spawnOnDetrigger = tag.getBoolean("SpawnOnDetrigger");
+        this.spawnOnDeTrigger = tag.getBoolean("SpawnOnDetrigger");
         this.dropItem = tag.getInt("DropItem");
         this.hasDroppedItem = tag.getBoolean("HasDroppedItem");
         this.spawnID = tag.getInt("SpawnID");
@@ -455,8 +476,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         this.maxSpawnVec = new Coord(tag.getInt("maxSpawnX"), tag.getInt("maxSpawnY"), tag.getInt("maxSpawnZ"));
 
         if (exTag.findShort("numEntities").filter(n -> n > 0).isPresent()) {
-            this.ticksBeforeLoad = 20;
-            this.delayLoadData = tag;
+            loadFromTag(tag);
         }
 
         exTag.findCompound("scope").ifPresent(c -> ScopeTag.loadScopeFromTag(this.scope, c));
@@ -470,7 +490,7 @@ public class AC_TileEntityMobSpawner extends AC_TileEntityScript {
         tag.putInt("RespawnDelay", this.respawnDelay);
         tag.putInt("SpawnNumber", this.spawnNumber);
         tag.putBoolean("SpawnOnTrigger", this.spawnOnTrigger);
-        tag.putBoolean("SpawnOnDetrigger", this.spawnOnDetrigger);
+        tag.putBoolean("SpawnOnDetrigger", this.spawnOnDeTrigger);
         tag.putInt("SpawnID", this.spawnID);
         tag.putInt("SpawnMeta", this.spawnMeta);
         tag.putInt("DropItem", this.dropItem);

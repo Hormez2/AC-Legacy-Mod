@@ -1,16 +1,16 @@
 package dev.adventurecraft.awakening.tile;
 
-import java.util.Random;
-
 import dev.adventurecraft.awakening.common.AC_DebugMode;
-import dev.adventurecraft.awakening.tile.entity.AC_TileEntityMobSpawner;
 import dev.adventurecraft.awakening.common.gui.AC_GuiMobSpawner;
+import dev.adventurecraft.awakening.tile.entity.AC_TileEntityMobSpawner;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Material;
 import net.minecraft.world.level.tile.TileEntityTile;
 import net.minecraft.world.level.tile.entity.TileEntity;
 import net.minecraft.world.phys.AABB;
+
+import java.util.Random;
 
 public class AC_BlockMobSpawner extends TileEntityTile implements AC_ITriggerDebugBlock {
 
@@ -64,7 +64,7 @@ public class AC_BlockMobSpawner extends TileEntityTile implements AC_ITriggerDeb
     @Override
     public void onTriggerDeactivated(Level world, int x, int y, int z) {
         var entity = (AC_TileEntityMobSpawner) world.getTileEntity(x, y, z);
-        if (entity.spawnOnDetrigger && !AC_DebugMode.triggerResetActive) {
+        if (entity.spawnOnDeTrigger && !AC_DebugMode.triggerResetActive) {
             entity.spawnMobs();
         }
     }

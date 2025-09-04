@@ -2,14 +2,16 @@ package dev.adventurecraft.awakening.common.gui;
 
 import dev.adventurecraft.awakening.client.gui.FilePickerWidget;
 import dev.adventurecraft.awakening.common.AC_JScriptHandler;
-import dev.adventurecraft.awakening.item.AC_Items;
-import dev.adventurecraft.awakening.layout.*;
-import dev.adventurecraft.awakening.primitives.TickTime;
-import dev.adventurecraft.awakening.tile.entity.AC_TileEntityMobSpawner;
 import dev.adventurecraft.awakening.common.Coord;
 import dev.adventurecraft.awakening.common.GuiSlider2;
 import dev.adventurecraft.awakening.extension.world.ExWorld;
+import dev.adventurecraft.awakening.item.AC_Items;
+import dev.adventurecraft.awakening.layout.IntBorder;
+import dev.adventurecraft.awakening.layout.IntPoint;
+import dev.adventurecraft.awakening.layout.IntRect;
+import dev.adventurecraft.awakening.primitives.TickTime;
 import dev.adventurecraft.awakening.script.EntityDescriptions;
+import dev.adventurecraft.awakening.tile.entity.AC_TileEntityMobSpawner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -75,10 +77,11 @@ public class AC_GuiMobSpawner extends Screen {
     }
 
     private static String getSpawnOnTypeMsg(AC_TileEntityMobSpawner mobSpawner) {
+        // @TODO switch to an enum state?
         if (mobSpawner.spawnOnTrigger) {
             return "Spawn On Trigger";
         }
-        if (mobSpawner.spawnOnDetrigger) {
+        if (mobSpawner.spawnOnDeTrigger) {
             return "Spawn on Detrigger";
         }
         return "Spawn on Timer";
@@ -228,10 +231,10 @@ public class AC_GuiMobSpawner extends Screen {
         else if (button.id == 53) {
             if (this.mobSpawner.spawnOnTrigger) {
                 this.mobSpawner.spawnOnTrigger = false;
-                this.mobSpawner.spawnOnDetrigger = true;
+                this.mobSpawner.spawnOnDeTrigger = true;
             }
-            else if (this.mobSpawner.spawnOnDetrigger) {
-                this.mobSpawner.spawnOnDetrigger = false;
+            else if (this.mobSpawner.spawnOnDeTrigger) {
+                this.mobSpawner.spawnOnDeTrigger = false;
             }
             else {
                 this.mobSpawner.spawnOnTrigger = true;
